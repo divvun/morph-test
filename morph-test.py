@@ -68,9 +68,6 @@ def whereis(programs):
 			raise EnvironmentError("Cannot find `%s`. Check $PATH." % p)
 	return out
 
-class UncleanWorkingDirectoryException(Exception):
-	pass
-
 # SUPPORT CLASSES
 
 class LookupError(Exception):
