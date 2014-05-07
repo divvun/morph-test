@@ -519,7 +519,7 @@ def lexc_to_yaml_string(data):
 	return out.getvalue()
 
 
-class UI(MorphTest, ArgumentParser):
+class UI(ArgumentParser):
 	def __init__(self):
 		ArgumentParser.__init__(self)
 
@@ -584,13 +584,13 @@ class UI(MorphTest, ArgumentParser):
 			if isinstance(v, list) and len(v) == 1:
 				self.args[k] = v[0]
 
-		MorphTest.__init__(self, **self.args)
+		self.test = MorphTest(**self.args)
 
 	def start(self):
 		import sys
-		ret = self.run()
-		sys.stdout.write(str(self))
-		self.exit(ret)
+		ret = self.test.run()
+		sys.stdout.write(str(self.test))
+		sys.exit(ret)
 
 def main():
 	try:
