@@ -30,14 +30,6 @@ import codecs
 import yaml
 
 
-try:
-	from lxml import etree
-	from lxml.etree import Element, SubElement
-except:
-	import xml.etree.ElementTree as etree
-	from xml.etree.ElementTree import Element, SubElement
-
-
 # SUPPORT FUNCTIONS
 
 def string_to_list(data):
@@ -183,16 +175,6 @@ class Test(object):
 		Returns: integer >= 0 <= 255  (exit value)
 		"""
 		raise NotImplementedError("Required method `run` was not implemented.")
-
-	def to_xml(self, *args, **kwargs):
-		"""Output XML suitable for saving in Statistics format.
-		It is recommended that you use etree for creating the tree.
-
-		Parameters: none
-		Returns: (string, string)
-			first being parent node, second being xml
-		"""
-		raise NotImplementedError("Required method `to_xml` was not implemented.")
 
 	def to_string(self, *args, **kwargs):
 		"""Prints the output of StringIO instance and other printable output.
@@ -519,38 +501,6 @@ class MorphTest(Test):
 					else:
 						parsed[key].add(results[1].strip())
 		return parsed
-
-	def to_xml(self):
-		q = Element('config')
-		q.attrib["value"] = self.f
-
-		r = SubElement(q, "revision", value=str(self._svn_revision(dirname(self.f))),
-					timestamp=datetime.utcnow().isoformat(),
-					checksum=self._checksum(open(self.f, 'rb').read()))
-
-		s = SubElement(r, 'gen')
-		s.attrib["value"] = self.gen
-		s.attrib["checksum"] = self._checksum(open(self.gen, 'rb').read())
-
-		s = SubElement(r, 'morph')
-		s.attrib["value"] = self.morph
-		s.attrib["checksum"] = self._checksum(open(self.morph, 'rb').read())
-
-		SubElement(r, 'total').text = str(self.passes + self.fails)
-		SubElement(r, 'passes').text = str(self.passes)
-		SubElement(r, 'fails').text = str(self.fails)
-
-		s = SubElement(r, 'tests')
-		for k, v in self.count.items():
-			t = SubElement(s, 'test')
-			t.text = str(k)
-			t.attrib['fails'] = str(v["Fail"])
-			t.attrib['passes'] = str(v["Pass"])
-
-		s = SubElement(r, "system")
-		SubElement(s, "speed").text = "%.4f" % self.timer
-
-		return ("morph", etree.tostring(r))
 
 	def to_string(self):
 		return self.out.getvalue()
