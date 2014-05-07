@@ -195,6 +195,8 @@ class MorphTest:
 		self.args = dict(kwargs)
 		self.f = self.args.get('test_file', f)
 
+        # TODO: check for null case
+
 		self.fails = 0
 		self.passes = 0
 
@@ -229,10 +231,10 @@ class MorphTest:
 		self.gen = self.args.get('gen') or section.get("Gen", None)
 		self.morph = self.args.get('morph') or section.get("Morph", None)
 
-		if self.args.get('surface', None):
-			self.gen = None
-		if self.args.get('lexical', None):
-			self.morph = None
+		#if self.args.get('surface', None):
+		#	self.gen = None
+		#if self.args.get('lexical', None):
+		#	self.morph = None
 
 		if self.gen == self.morph == None:
 			raise AttributeError("One of Gen or Morph must be configured.")
@@ -530,10 +532,9 @@ def lexc_to_yaml_string(data):
 	return out.getvalue()
 
 
-class Frontend(Test, ArgumentParser):
+class Frontend(ArgumentParser):
 	def __init__(self, stats=True, colour=False):
 		ArgumentParser.__init__(self)
-		Test.__init__(self)
 		if colour:
 			self.add_argument("-c", "--colour", dest="colour",
 					action="store_true", help="Colours the output")
@@ -553,7 +554,7 @@ class Frontend(Test, ArgumentParser):
 			sys.exit()
 
 
-class UI(Frontend, MorphTest):
+class UI(MorphTest, Frontend):
 	def __init__(self):
 		Frontend.__init__(self, colour=True)
 		self.description="""Test morphological transducers for consistency.
