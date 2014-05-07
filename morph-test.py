@@ -163,9 +163,9 @@ class MorphTest:
 			f = counts["Fail"]
 			out = "%s %d/%d/%d" % (title, p, f, p+f)
 			if counts["Fail"] > 0:
-				if not self.args.get('hide_fail'):
+				if not self.args.hide_fail:
 					self.write(colourise("[{red}FAIL{reset}] %s\n" % out))
-			elif not self.args.get('hide_pass'):
+			elif not self.args.hide_pass:
 				self.write(colourise("[{green}PASS{reset}] %s\n" % out))
 
 	class TerseOutput(AllOutput):
@@ -178,9 +178,9 @@ class MorphTest:
 	class NoOutput(AllOutput):
 		pass
 
-	def __init__(self, f=None, **kwargs):
-		self.args = dict(kwargs)
-		self.f = self.args.get('test_file', f)
+	def __init__(self, args):
+		self.args = args
+		self.f = self.args.test_file
 
 		# TODO: check for null case
 
@@ -192,7 +192,7 @@ class MorphTest:
 
 	def run(self):
 		timing_begin = time.time()
-		self.run_tests(self.args['test'])
+		self.run_tests(self.args.test)
 		self.timer = time.time() - timing_begin
 		if self.fails > 0:
 			return 1
@@ -200,26 +200,28 @@ class MorphTest:
 			return 0
 
 	def load_config(self):
+		args = self.args
+
 		if self.f.endswith('lexc'):
 			f = parse_lexc_trans(open(self.f),
-					self.args.get('gen'),
-					self.args.get('morph'),
-					self.args.get('app'),
-					self.args.get('transducer'),
-					self.args.get('section'))
+					args.gen,
+					args.morph,
+					args.app,
+					args.transducer,
+					args.section)
 		else:
 			f = yaml.load(open(self.f), _OrderedDictYAMLLoader)
 
-		section = f.get("Config", {}).get(self.args['section'], {})
-		self.program = shlex.split(self.args.get('app') or section.get("App", "hfst-lookup"))
+		section = f.get("Config", {}).get(args.section, {})
+		self.program = shlex.split(args.app or section.get("App", "hfst-lookup"))
 		whereis([self.program[0]])
 
-		self.gen = self.args.get('gen') or section.get("Gen", None)
-		self.morph = self.args.get('morph') or section.get("Morph", None)
+		self.gen = args.gen or section.get("Gen", None)
+		self.morph = args.morph or section.get("Morph", None)
 
-		#if self.args.get('surface', None):
+		#if args.get('surface', None):
 		#	self.gen = None
-		#if self.args.get('lexical', None):
+		#if args.get('lexical', None):
 		#	self.morph = None
 
 		if self.gen == self.morph == None:
@@ -229,16 +231,16 @@ class MorphTest:
 			if i and not os.path.isfile(i):
 				raise IOError("File %s does not exist." % i)
 
-		if self.args.get('silent'):
+		if args.silent:
 			self.out = MorphTest.NoOutput()
-		elif self.args.get('terse'):
+		elif args.terse:
 			self.out = MorphTest.TerseOutput()
-		elif self.args.get('compact'):
-			self.out = MorphTest.CompactOutput(self.args)
+		elif args.compact:
+			self.out = MorphTest.CompactOutput(args)
 		else:
 			self.out = MorphTest.NormalOutput()
 
-		if self.args.get('verbose'):
+		if args.verbose:
 			self.out.write("`%s` will be used for parsing dictionaries.\n" % self.program)
 
 		self.tests = f["Tests"]
@@ -247,17 +249,17 @@ class MorphTest:
 				self.tests[test][key] = string_to_list(val)
 
 		# TODO: reintroduce the removal of colour!
-		#if not self.args.get('colour'):
+		#if not args.colour:
 		#	colourise = lambda x, y=None: x
 
 	def run_tests(self, data=None):
-		if self.args.get('surface') == self.args.get('lexical') == False:
-			self.args['surface'] = self.args['lexical'] = True
+		if self.args.surface == self.args.lexical == False:
+			self.args.surface = self.args.lexical = True
 
 		if data != None:
 			self.parse_fsts(self.tests[data[0]])
-			if self.args.get('lexical'): self.run_test(data[0], True)
-			if self.args.get('surface'): self.run_test(data[0], False)
+			if self.args.lexical: self.run_test(data[0], True)
+			if self.args.surface: self.run_test(data[0], False)
 
 		else:
 			tests = {}
@@ -265,10 +267,10 @@ class MorphTest:
 				tests.update(self.tests[t])
 			self.parse_fsts(tests)
 			for t in self.tests:
-				if self.args.get('lexical'): self.run_test(t, True)
-				if self.args.get('surface'): self.run_test(t, False)
+				if self.args.lexical: self.run_test(t, True)
+				if self.args.surface: self.run_test(t, False)
 
-		if self.args.get('verbose') or self.args.get('terse'):
+		if self.args.verbose or self.args.terse:
 			self.out.final_result(self)
 
 	def parse_fsts(self, tests):
@@ -295,19 +297,19 @@ class MorphTest:
 		gen = Process(target=parser, args=(self, "gen", self.gen, tests))
 		gen.daemon = True
 		gen.start()
-		if self.args.get('verbose'):
+		if self.args.verbose:
 			self.out.write("Generating...\n")
 
 		morph = Process(target=parser, args=(self, "morph", self.morph, invtests))
 		morph.daemon = True
 		morph.start()
-		if self.args.get('verbose'):
+		if self.args.verbose:
 			self.out.write("Morphing...\n")
 
 		gen.join()
 		morph.join()
 
-		if self.args.get('verbose'):
+		if self.args.verbose:
 			self.out.write("Done!\n")
 
 	def get_forms(self, test, forms):
@@ -378,37 +380,37 @@ class MorphTest:
 						passed = True
 						success.add(form)
 						self.count[d]["Pass"] += 1
-						if not self.args.get('hide_pass'):
+						if not self.args.hide_pass:
 							self.out.success(test, form)
 				for form in missing_detested:
 					passed = True
 					success.add(form)
 					self.count[d]["Pass"] += 1
-					if not self.args.get('hide_pass'):
+					if not self.args.hide_pass:
 						self.out.success(test, "<No '%s' %s>" % (form, desc.lower()))
 			else:
 				if len(invalid) == 1 and list(invalid)[0].endswith("+?"):
 					invalid = set()
 					passed = True
 					self.count[d]["Pass"] += 1
-					if not self.args.get('hide_pass'):
+					if not self.args.hide_pass:
 						self.out.success(test, "<No %s>" % desc.lower())
 
 			if len(missing) > 0:
-				if not self.args.get('hide_fail'):
+				if not self.args.hide_fail:
 					self.out.failure(test, "Missing results", missing)
 				self.count[d]["Fail"] += len(missing)
 			if len(invalid) > 0 and \
-					(not self.args.get('ignore_analyses') or not passed):
-				if not self.args.get('hide_fail'):
+					(not self.args.ignore_analyses or not passed):
+				if not self.args.hide_fail:
 					self.out.failure(test, "Unexpected results", invalid)
 				self.count[d]["Fail"] += len(invalid)
 			if len(detested) > 0:
-				if self.args.get('colour'):
+				if self.args.colour:
 					msg = colourise("{red}BROKEN!{reset}")
 				else:
 					msg = "BROKEN!"
-				if not self.args.get('hide_fail'):
+				if not self.args.hide_fail:
 					self.out.failure(test, msg + " Negative results", detested)
 				self.count[d]["Fail"] += len(detested)
 
@@ -556,35 +558,35 @@ class UI(ArgumentParser):
 			dest="hide_pass", action="store_true",
 			help="Suppresses failures to make finding passes easier")
 		self.add_argument("-S", "--section", default=["hfst"],
-			dest="section", nargs=1, required=False,
+			dest="section", nargs='?', required=False,
 			help="The section to be used for testing (default is `hfst`)")
 		self.add_argument("-t", "--test",
-			dest="test", nargs=1, required=False,
+			dest="test", nargs='?', required=False,
 			help="""Which test to run (Default: all). TEST = test ID, e.g.
 			'Noun - g\u00E5etie' (remember quotes if the ID contains spaces)""")
 		self.add_argument("-F", "--fallback",
-			dest="transducer", nargs=1, required=False,
+			dest="transducer", nargs='?', required=False,
 			help="""Which fallback transducer to use.""")
 		self.add_argument("-v", "--verbose",
 			dest="verbose", action="store_true",
 			help="More verbose output.")
 
-		self.add_argument("--app", dest="app", nargs=1, required=False,
+		self.add_argument("--app", dest="app", nargs='?', required=False,
 			help="Override application used for test")
-		self.add_argument("--gen", dest="gen", nargs=1, required=False,
+		self.add_argument("--gen", dest="gen", nargs='?', required=False,
 			help="Override generation transducer used for test")
-		self.add_argument("--morph", dest="morph", nargs=1, required=False,
+		self.add_argument("--morph", dest="morph", nargs='?', required=False,
 			help="Override morph transducer used for test")
 
-		self.add_argument("test_file", nargs=1,
+		self.add_argument("test_file", nargs='?',
 			help="YAML file with test rules")
 
-		self.args = dict(self.parse_args()._get_kwargs())
-		for k, v in self.args.copy().items():
-			if isinstance(v, list) and len(v) == 1:
-				self.args[k] = v[0]
-
-		self.test = MorphTest(**self.args)
+		#self.args = dict(self.parse_args()._get_kwargs())
+		#for k, v in self.args.copy().items():
+		#	if isinstance(v, list) and len(v) == 1:
+		#		self.args[k] = v[0]
+		print(self.parse_args())
+		self.test = MorphTest(self.parse_args())
 
 	def start(self):
 		import sys
@@ -598,9 +600,9 @@ def main():
 		ui.start()
 	except KeyboardInterrupt:
 		pass
-	except Exception as e:
-		print("Error: %r" % e)
-		sys.exit(1)
+	#except Exception as e:
+	#	print("Error: %r" % e)
+	#	sys.exit(1)
 
 if __name__ == "__main__":
 	main()
