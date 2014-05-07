@@ -519,36 +519,17 @@ def lexc_to_yaml_string(data):
 	return out.getvalue()
 
 
-class Frontend(ArgumentParser):
-	def __init__(self, stats=True, colour=False):
-		ArgumentParser.__init__(self)
-		if colour:
-			self.add_argument("-c", "--colour", dest="colour",
-					action="store_true", help="Colours the output")
-
-	def start(self):
-		try:
-			try:
-				ret = self.run()
-			except IOError as e:
-				print(e)
-				sys.exit(1)
-
-			print(str(self))
-			self.exit(ret)
-
-		except KeyboardInterrupt:
-			sys.exit()
-
-
-class UI(MorphTest, Frontend):
+class UI(MorphTest, ArgumentParser):
 	def __init__(self):
-		Frontend.__init__(self, colour=True)
+		ArgumentParser.__init__(self)
+
 		self.description="""Test morphological transducers for consistency.
 			`hfst-lookup` (or Xerox' `lookup` with argument -x) must be
 			available on the PATH."""
 		self.epilog="Will run all tests in the test_file by default."
 
+		self.add_argument("-c", "--colour", dest="colour",
+			action="store_true", help="Colours the output")
 		self.add_argument("-C", "--compact",
 			dest="compact", action="store_true",
 			help="Makes output more compact")
