@@ -44,40 +44,18 @@ def invert_dict(data):
 				tmp.setdefault(v, set()).add(key)
 		return tmp
 
-def colourise(string, opt=None):
-	#TODO per class, make into a class too
-	def red(s="", r="\033[m"):
-		return "\033[1;31m%s%s" % (s, r)
-	def green(s="", r="\033[m"):
-		return "\033[0;32m%s%s" % (s, r)
-	def orange(s="", r="\033[m"):
-		return "\033[0;33m%s%s" % (s, r)
-	def yellow(s="", r="\033[m"):
-		return "\033[1;33m%s%s" % (s, r)
-	def blue(s="", r="\033[m"):
-		return "\033[0;34m%s%s" % (s, r)
-	def light_blue(s="", r="\033[m"):
-		return "\033[0;36m%s%s" % (s, r)
-	def reset(s=""):
-		return "\033[m%s" % s
-
-	if not opt:
-		x = string
-		x = x.replace("=>", blue("=>"))
-		x = x.replace("<=", blue("<="))
-		x = x.replace("PASS", green("PASS"))
-		x = x.replace("FAIL", red("FAIL"))
-		return x
-
-	elif opt == 1:
-		return light_blue(string)
-
-	elif opt == 2:
-		x = string.replace('asses: ', 'asses: %s' % green(r=""))
-		x = x.replace('ails: ', 'ails: %s' % red(r=""))
-		x = x.replace(', ', reset(', '))
-		x = x.replace('otal: ', 'otal: %s' % light_blue(r=""))
-		return "%s%s" % (x, reset())
+def colourise(string, **kwargs):
+	colors = {
+		"red": "\033[1;31m",
+		"green": "\033[0;32m",
+		"orange": "\033[0;33m",
+		"yellow": "\033[1;33m",
+		"blue": "\033[0;34m",
+		"light_blue": "\033[0;36m",
+		"reset": "\033[m"
+	}
+	kwargs.update(colors)
+	return string.format(**kwargs)
 
 def whereis(programs):
 	out = {}
@@ -143,28 +121,40 @@ class MorphTest:
 		def success(self, *args): pass
 		def failure(self, *args): pass
 		def result(self, *args): pass
-
 		def final_result(self, hfst):
-			text = "Total passes: %d, Total fails: %d, Total: %d\n"
-			self.write(colourise(text % (hfst.passes, hfst.fails, hfst.fails+hfst.passes), 2))
+			text = colourise("Total passes: {green}{{passes}}{reset}, " +\
+				   "Total fails: {red}{{fails}}{reset}, " +\
+				   "Total: {light_blue}{{total}}{reset}\n")
+			
+			text = text.format(
+				passes=hfst.passes,
+				fails=hfst.fails,
+				total=hfst.fails+hfst.passes
+			)
+
+			self.write(text)
 
 	class NormalOutput(AllOutput):
 		def title(self, text):
-			self.write(colourise("-"*len(text)+'\n', 1))
-			self.write(colourise(text+'\n', 1))
-			self.write(colourise("-"*len(text)+'\n', 1))
+			self.write(colourise("{light_blue}-" * len(text) + '\n'))
+			self.write(text + '\n')
+			self.write(colourise("-" * len(text) + '{reset}\n'))
 
 		def success(self, l, r):
-			self.write(colourise("[PASS] %s => %s\n" % (l, r)))
+			self.write(colourise("[{green}PASS{reset}] %s {blue}=>{reset} %s\n" % (l, r)))
 
 		def failure(self, form, err, errlist):
-			self.write(colourise("[FAIL] %s => %s: %s\n" % (form, err, ", ".join(errlist))))
+			self.write(colourise("[{red}FAIL{reset}] %s {blue}=>{reset} %s: %s\n" % (
+				form, err, ", ".join(errlist))))
 
 		def result(self, title, test, counts):
 			p = counts["Pass"]
 			f = counts["Fail"]
-			text = "\nTest %d - Passes: %d, Fails: %d, Total: %d\n"
-			self.write(colourise(text % (test, p, f, p+f), 2))
+			text = colourise("\nTest {{n}} - Passes: {green}{{passes}}{reset}, " +
+				   "Fails: {red}{{fails}}{reset}, " +
+				   "Total: {light_blue}{{total}}{reset}\n")
+			text = text.format(n=test, passes=p, fails=f, total=p+f)
+			self.write(text)
 
 	class CompactOutput(AllOutput):
 		def __init__(self, args):
@@ -177,16 +167,16 @@ class MorphTest:
 			out = "%s %d/%d/%d" % (title, p, f, p+f)
 			if counts["Fail"] > 0:
 				if not self.args.get('hide_fail'):
-					self.write(colourise("[FAIL] %s\n" % out))
+					self.write(colourise("[{red}FAIL{reset}] %s\n" % out))
 			elif not self.args.get('hide_pass'):
-				self.write(colourise("[PASS] %s\n" % out))
+				self.write(colourise("[{green}PASS{reset}] %s\n" % out))
 
 	class TerseOutput(AllOutput):
 		def final_result(self, counts):
 			if counts.fails > 0:
-				self.write(colourise("FAIL\n"))
+				self.write(colourise("{red}FAIL{reset}\n"))
 			else:
-				self.write(colourise("PASS\n"))
+				self.write(colourise("{green}PASS{reset}\n"))
 
 	class NoOutput(AllOutput):
 		pass
@@ -195,7 +185,7 @@ class MorphTest:
 		self.args = dict(kwargs)
 		self.f = self.args.get('test_file', f)
 
-        # TODO: check for null case
+		# TODO: check for null case
 
 		self.fails = 0
 		self.passes = 0
@@ -213,7 +203,6 @@ class MorphTest:
 			return 0
 
 	def load_config(self):
-		global colourise
 		if self.f.endswith('lexc'):
 			f = parse_lexc_trans(open(self.f),
 					self.args.get('gen'),
@@ -260,8 +249,9 @@ class MorphTest:
 			for key, val in self.tests[test].items():
 				self.tests[test][key] = string_to_list(val)
 
-		if not self.args.get('colour'):
-			colourise = lambda x, y=None: x
+		# TODO: reintroduce the removal of colour!
+		#if not self.args.get('colour'):
+		#	colourise = lambda x, y=None: x
 
 	def run_tests(self, data=None):
 		if self.args.get('surface') == self.args.get('lexical') == False:
@@ -418,7 +408,7 @@ class MorphTest:
 				self.count[d]["Fail"] += len(invalid)
 			if len(detested) > 0:
 				if self.args.get('colour'):
-					msg = "\033[1;31mBROKEN!\033[m"
+					msg = colourise("{red}BROKEN!{reset}")
 				else:
 					msg = "BROKEN!"
 				if not self.args.get('hide_fail'):
