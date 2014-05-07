@@ -581,10 +581,6 @@ class UI(ArgumentParser):
 		self.add_argument("test_file", nargs='?',
 			help="YAML file with test rules")
 
-		#self.args = dict(self.parse_args()._get_kwargs())
-		#for k, v in self.args.copy().items():
-		#	if isinstance(v, list) and len(v) == 1:
-		#		self.args[k] = v[0]
 		print(self.parse_args())
 		self.test = MorphTest(self.parse_args())
 
