@@ -133,62 +133,11 @@ class _OrderedDictYAMLLoader(yaml.Loader):
 			mapping[key] = value
 		return mapping
 
-class Test(object):
-	"""Abstract class for Test objects
 
-	It is recommended that print not be used within a Test class.
-	Use a StringIO instance and .getvalue() in to_string().
-	"""
-
-	"""Attributes"""
-	timer = None
-
-	def __str__(self):
-		"""Will return to_string method's content if exists,
-		otherwise default to parent class
-		"""
-		try: return self.to_string()
-		except: return object.__str__(self)
-
-	def _checksum(self, data):
-		"""Returns checksum hash for given data (currently SHA1) for the purpose
-		of maintaining integrity of test data.
-		"""
-		if hasattr(data, 'encode'):
-			data = data.encode('utf-8')
-		return sha1(data).hexdigest()
-
-	def _svn_revision(self, directory):
-		"""Returns the SVN revision of the given dictionary directory"""
-		whereis(['svnversion'])
-		res = Popen('svnversion', stdout=PIPE, close_fds=True).communicate()[0].decode('utf-8').strip()
-		try:
-			int(res) # will raise error if it can't be int'd
-			return str(res)
-		except:
-			raise UncleanWorkingDirectoryException("You must have a clean SVN directory. Commit or remove uncommitted files.")
-
-	def run(self, *args, **kwargs):
-		"""Runs the actual test
-
-		Parameters: none
-		Returns: integer >= 0 <= 255  (exit value)
-		"""
-		raise NotImplementedError("Required method `run` was not implemented.")
-
-	def to_string(self, *args, **kwargs):
-		"""Prints the output of StringIO instance and other printable output.
-
-		Parameters: none
-		Returns: string
-		"""
-		raise NotImplementedError("Required method `to_string` was not implemented.")
-
-
-class MorphTest(Test):
+class MorphTest:
 	class AllOutput(StringIO):
 		def __str__(self):
-			return self.to_string()
+			return self.getvalue()
 
 		def title(self, *args): pass
 		def success(self, *args): pass
@@ -198,9 +147,6 @@ class MorphTest(Test):
 		def final_result(self, hfst):
 			text = "Total passes: %d, Total fails: %d, Total: %d\n"
 			self.write(colourise(text % (hfst.passes, hfst.fails, hfst.fails+hfst.passes), 2))
-
-		def to_string(self):
-			return self.getvalue()
 
 	class NormalOutput(AllOutput):
 		def title(self, text):
@@ -502,7 +448,7 @@ class MorphTest(Test):
 						parsed[key].add(results[1].strip())
 		return parsed
 
-	def to_string(self):
+	def __str__(self):
 		return self.out.getvalue()
 
 
@@ -600,7 +546,7 @@ class Frontend(Test, ArgumentParser):
 				print(e)
 				sys.exit(1)
 
-			print(self.to_string())
+			print(str(self))
 			self.exit(ret)
 
 		except KeyboardInterrupt:
@@ -674,7 +620,7 @@ class UI(Frontend, MorphTest):
 	def start(self):
 		import sys
 		ret = self.run()
-		sys.stdout.write(self.to_string())
+		sys.stdout.write(str(self))
 		self.exit(ret)
 
 def main():
