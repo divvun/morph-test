@@ -15,7 +15,7 @@ from hashlib import sha1
 from tempfile import NamedTemporaryFile
 from argparse import ArgumentParser
 from io import StringIO
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 
 import os
 import os.path
@@ -30,6 +30,9 @@ import codecs
 import yaml
 
 
+TestCase = namedtuple("TestCase", ['input', 'outputs'])
+
+
 # SUPPORT FUNCTIONS
 
 def string_to_list(data):
@@ -41,7 +44,9 @@ def invert_dict(data):
 		tmp = OrderedDict()
 		for key, val in data.items():
 			for v in string_to_list(val):
-				tmp.setdefault(v, set()).add(key)
+				d = tmp.setdefault(v, [])
+				if key not in d:
+					d.append(key)
 		return tmp
 
 def colourise(string, **kwargs):
@@ -57,7 +62,7 @@ def colourise(string, **kwargs):
 	kwargs.update(colors)
 	return string.format(**kwargs)
 
-def whereis(programs):
+def check_path_exists(programs):
 	out = {}
 	for p in programs:
 		for path in os.environ.get('PATH', '').split(':'):
@@ -108,6 +113,50 @@ class _OrderedDictYAMLLoader(yaml.Loader):
 			mapping[key] = value
 		return mapping
 
+
+def yaml_load_ordered(f):
+    return yaml.load(f, _OrderedDictYAMLLoader)
+
+
+class TestFile:
+	def __init__(self, data, system="hfst"):
+		self.data = data
+		self._system = system
+
+	@property
+	def surface_tests(self):
+		tests = OrderedDict()
+		for title, cases in self.data['Tests'].items():
+			new_cases = []
+			for surface, lexical in cases.items():
+				new_cases.append(TestCase(input=surface, outputs=string_to_list(lexical)))
+			tests[title] = new_cases
+		return tests
+
+	@property
+	def lexical_tests(self):
+		tests = OrderedDict()
+		for title, cases in self.data['Tests'].items():
+			new_cases = []
+			for lexical, surface in invert_dict(cases).items():
+				new_cases.append(TestCase(input=lexical, outputs=string_to_list(surface)))
+			tests[title] = new_cases
+		return tests
+
+	@property
+	def gen(self):
+		return self.data.get("Config", {}).get(self._system, {}).get("Gen", None)
+	
+	@property
+	def morph(self):
+		return self.data.get("Config", {}).get(self._system, {}).get("Morph", None)
+	
+	@property
+	def app(self):
+		a = self.data.get("Config", {}).get(self._system, {}).get("App", None)
+		if a is None:
+			a = "hfst-lookup" if self._system == "hfst" else "lookup"
+		return a
 
 class MorphTest:
 	class AllOutput(StringIO):
@@ -180,7 +229,6 @@ class MorphTest:
 
 	def __init__(self, args):
 		self.args = args
-		self.f = self.args.test_file
 
 		# TODO: check for null case
 
@@ -188,7 +236,7 @@ class MorphTest:
 		self.passes = 0
 
 		self.count = OrderedDict()
-		self.load_config()
+		self.load_config(self.args.test_file)
 
 	def run(self):
 		timing_begin = time.time()
@@ -199,25 +247,26 @@ class MorphTest:
 		else:
 			return 0
 
-	def load_config(self):
+	def load_config(self, fn):
 		args = self.args
 
-		if self.f.endswith('lexc'):
-			f = parse_lexc_trans(open(self.f),
+		if fn.endswith('lexc'):
+			self.config = TestFile(parse_lexc_trans(open(fn),
 					args.gen,
 					args.morph,
 					args.app,
 					args.transducer,
-					args.section)
+					args.section))
 		else:
-			f = yaml.load(open(self.f), _OrderedDictYAMLLoader)
+			self.config = TestFile(yaml_load_ordered(open(fn)))
 
-		section = f.get("Config", {}).get(args.section, {})
-		self.program = shlex.split(args.app or section.get("App", "hfst-lookup"))
-		whereis([self.program[0]])
+		config = self.config
 
-		self.gen = args.gen or section.get("Gen", None)
-		self.morph = args.morph or section.get("Morph", None)
+		self.program = shlex.split(args.app or config.app)
+		check_path_exists([self.program[0]])
+
+		self.gen = args.gen or config.gen
+		self.morph = args.morph or config.morph
 
 		#if args.get('surface', None):
 		#	self.gen = None
@@ -243,43 +292,45 @@ class MorphTest:
 		if args.verbose:
 			self.out.write("`%s` will be used for parsing dictionaries.\n" % self.program)
 
-		self.tests = f["Tests"]
-		for test in self.tests:
-			for key, val in self.tests[test].items():
-				self.tests[test][key] = string_to_list(val)
-
 		# TODO: reintroduce the removal of colour!
 		#if not args.colour:
 		#	colourise = lambda x, y=None: x
 
 	def run_tests(self, data=None):
-		if self.args.surface == self.args.lexical == False:
-			self.args.surface = self.args.lexical = True
+		args = self.args
+		config = self.config
 
-		if data != None:
-			self.parse_fsts(self.tests[data[0]])
-			if self.args.lexical: self.run_test(data[0], True)
-			if self.args.surface: self.run_test(data[0], False)
+		if args.surface == args.lexical == False:
+			args.surface = args.lexical = True
 
+		# TODO: reintroduce individual test case support
+		#if data != None:
+		#	self.parse_fsts(self.tests[data[0]])
+		#	if args.lexical: self.run_test(data[0], True)
+		#	if args.surface: self.run_test(data[0], False)
+
+		if False: pass
 		else:
-			tests = {}
-			for t in self.tests:
-				tests.update(self.tests[t])
-			self.parse_fsts(tests)
-			for t in self.tests:
-				if self.args.lexical: self.run_test(t, True)
-				if self.args.surface: self.run_test(t, False)
+			self.parse_fsts()
 
-		if self.args.verbose or self.args.terse:
+			print(self.results)
+			if args.lexical:
+				for t in config.lexical_tests:
+					self.run_test(t, True)
+
+			if args.surface:
+				for t in config.surface_tests:
+					self.run_test(t, False)
+
+		if args.verbose or args.terse:
 			self.out.final_result(self)
 
-	def parse_fsts(self, tests):
-		invtests = invert_dict(tests)
+	def parse_fsts(self):
 		manager = Manager()
 		self.results = manager.dict({"gen": {}, "morph": {}})
 
 		def parser(self, d, f, tests):
-			keys = [key.lstrip("~") for key in tests.keys()]
+			keys = [x[0].lstrip("~") for vals in tests.values() for x in vals]
 			app = Popen(self.program + [f], stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
 			args = '\n'.join(keys) + '\n'
 
@@ -294,13 +345,13 @@ class MorphTest:
 			else:
 				self.results[d] = self.parse_fst_output(res)
 
-		gen = Process(target=parser, args=(self, "gen", self.gen, tests))
+		gen = Process(target=parser, args=(self, "gen", self.gen, self.config.lexical_tests))
 		gen.daemon = True
 		gen.start()
 		if self.args.verbose:
 			self.out.write("Generating...\n")
 
-		morph = Process(target=parser, args=(self, "morph", self.morph, invtests))
+		morph = Process(target=parser, args=(self, "morph", self.morph, self.config.surface_tests))
 		morph.daemon = True
 		morph.start()
 		if self.args.verbose:
@@ -331,12 +382,12 @@ class MorphTest:
 		if is_lexical:
 			desc = "Lexical/Generation"
 			f = "gen"
-			tests = self.tests[data]
+			tests = self.config.lexical_tests[data]
 
 		else: #surface
 			desc = "Surface/Analysis"
 			f = "morph"
-			tests = invert_dict(self.tests[data])
+			tests = self.config.surface_tests[data]
 
 		if self.results.get('err'):
 			raise LookupError('`%s` had an error:\n%s' % (self.program, self.results['err']))
@@ -348,7 +399,10 @@ class MorphTest:
 
 		self.count[d] = {"Pass": 0, "Fail": 0}
 
-		for test, forms in tests.items():
+		for testcase in tests:
+			test = testcase.input
+			forms = testcase.outputs
+
 			actual_results = set(self.results[f][test.lstrip("~")])
 			test, detested_results, expected_results = self.get_forms(test, forms)
 
@@ -488,6 +542,7 @@ def parse_lexc(f, fallback=None):
 				if output[trans][test].get(left) is None:
 					output[trans][test][left] = []
 				output[trans][test][left].append(right)
+
 	return dict(output)
 
 def parse_lexc_trans(f, gen=None, morph=None, app=None, fallback=None, lookup="hfst"):
