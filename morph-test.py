@@ -115,7 +115,7 @@ class _OrderedDictYAMLLoader(yaml.Loader):
 
 
 def yaml_load_ordered(f):
-    return yaml.load(f, _OrderedDictYAMLLoader)
+	return yaml.load(f, _OrderedDictYAMLLoader)
 
 
 class TestFile:
@@ -146,11 +146,11 @@ class TestFile:
 	@property
 	def gen(self):
 		return self.data.get("Config", {}).get(self._system, {}).get("Gen", None)
-	
+
 	@property
 	def morph(self):
 		return self.data.get("Config", {}).get(self._system, {}).get("Morph", None)
-	
+
 	@property
 	def app(self):
 		a = self.data.get("Config", {}).get(self._system, {}).get("App", None)
@@ -171,7 +171,7 @@ class MorphTest:
 			text = colourise("Total passes: {green}{{passes}}{reset}, " +\
 				   "Total fails: {red}{{fails}}{reset}, " +\
 				   "Total: {light_blue}{{total}}{reset}\n")
-			
+
 			text = text.format(
 				passes=hfst.passes,
 				fails=hfst.fails,
@@ -218,6 +218,12 @@ class MorphTest:
 				self.write(colourise("[{green}PASS{reset}] %s\n" % out))
 
 	class TerseOutput(AllOutput):
+		def success(self, l, r):
+			self.write(colourise("{green}.{reset}"))
+		def failure(self, form, err, errlist):
+			self.write(colourise("{red}!{reset}"))
+		def result(self, title, test, counts):
+			self.write('\n')
 		def final_result(self, counts):
 			if counts.fails > 0:
 				self.write(colourise("{red}FAIL{reset}\n"))
@@ -268,9 +274,9 @@ class MorphTest:
 		self.gen = args.gen or config.gen
 		self.morph = args.morph or config.morph
 
-		#if args.get('surface', None):
+		#if args.surface:
 		#	self.gen = None
-		#if args.get('lexical', None):
+		#if args.lexical:
 		#	self.morph = None
 
 		if self.gen == self.morph == None:
@@ -290,30 +296,27 @@ class MorphTest:
 			self.out = MorphTest.NormalOutput()
 
 		if args.verbose:
-			self.out.write("`%s` will be used for parsing dictionaries.\n" % self.program)
+			self.out.write("`%s` will be used for parsing dictionaries.\n" % self.program[0])
 
 		# TODO: reintroduce the removal of colour!
 		#if not args.colour:
 		#	colourise = lambda x, y=None: x
 
-	def run_tests(self, data=None):
+	def run_tests(self, single_test=None):
 		args = self.args
 		config = self.config
 
 		if args.surface == args.lexical == False:
 			args.surface = args.lexical = True
 
-		# TODO: reintroduce individual test case support
-		#if data != None:
-		#	self.parse_fsts(self.tests[data[0]])
-		#	if args.lexical: self.run_test(data[0], True)
-		#	if args.surface: self.run_test(data[0], False)
+		if single_test is not None:
+			self.parse_fsts(single_test)
+			if args.lexical: self.run_test(single_test, True)
+			if args.surface: self.run_test(single_test, False)
 
-		if False: pass
 		else:
 			self.parse_fsts()
 
-			print(self.results)
 			if args.lexical:
 				for t in config.lexical_tests:
 					self.run_test(t, True)
@@ -325,12 +328,17 @@ class MorphTest:
 		if args.verbose or args.terse:
 			self.out.final_result(self)
 
-	def parse_fsts(self):
+	def parse_fsts(self, key=None):
+		args = self.args
 		manager = Manager()
 		self.results = manager.dict({"gen": {}, "morph": {}})
 
 		def parser(self, d, f, tests):
-			keys = [x[0].lstrip("~") for vals in tests.values() for x in vals]
+			# TODO: handle ~ in file parser
+			if key is not None:
+				keys = [x.lstrip("~") for x in tests[key]]
+			else:
+				keys = [x[0].lstrip("~") for vals in tests.values() for x in vals]
 			app = Popen(self.program + [f], stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
 			args = '\n'.join(keys) + '\n'
 
@@ -345,20 +353,24 @@ class MorphTest:
 			else:
 				self.results[d] = self.parse_fst_output(res)
 
-		gen = Process(target=parser, args=(self, "gen", self.gen, self.config.lexical_tests))
-		gen.daemon = True
-		gen.start()
-		if self.args.verbose:
-			self.out.write("Generating...\n")
+		if args.lexical:
+			gen = Process(target=parser, args=(self, "gen", self.gen, self.config.lexical_tests))
+			gen.daemon = True
+			gen.start()
+			if self.args.verbose:
+				self.out.write("Generating...\n")
 
-		morph = Process(target=parser, args=(self, "morph", self.morph, self.config.surface_tests))
-		morph.daemon = True
-		morph.start()
-		if self.args.verbose:
-			self.out.write("Morphing...\n")
+		if args.surface:
+			morph = Process(target=parser, args=(self, "morph", self.morph, self.config.surface_tests))
+			morph.daemon = True
+			morph.start()
+			if self.args.verbose:
+				self.out.write("Morphing...\n")
 
-		gen.join()
-		morph.join()
+		if args.lexical:
+			gen.join()
+		if args.surface:
+			morph.join()
 
 		if self.args.verbose:
 			self.out.write("Done!\n")
@@ -636,11 +648,9 @@ class UI(ArgumentParser):
 		self.add_argument("test_file", nargs='?',
 			help="YAML file with test rules")
 
-		print(self.parse_args())
 		self.test = MorphTest(self.parse_args())
 
 	def start(self):
-		import sys
 		ret = self.test.run()
 		sys.stdout.write(str(self.test))
 		sys.exit(ret)
@@ -650,7 +660,7 @@ def main():
 		ui = UI()
 		ui.start()
 	except KeyboardInterrupt:
-		pass
+		sys.exit(130)
 	#except Exception as e:
 	#	print("Error: %r" % e)
 	#	sys.exit(1)
