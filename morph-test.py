@@ -49,7 +49,7 @@ def invert_dict(data):
 					d.append(key)
 		return tmp
 
-def colourise(string, **kwargs):
+def colourise(string, *args, **kwargs):
 	colors = {
 		"red": "\033[1;31m",
 		"green": "\033[0;32m",
@@ -60,7 +60,7 @@ def colourise(string, **kwargs):
 		"reset": "\033[m"
 	}
 	kwargs.update(colors)
-	return string.format(**kwargs)
+	return string.format(*args, **kwargs)
 
 def check_path_exists(programs):
 	out = {}
@@ -168,17 +168,13 @@ class MorphTest:
 		def failure(self, *args): pass
 		def result(self, *args): pass
 		def final_result(self, hfst):
-			text = colourise("Total passes: {green}{{passes}}{reset}, " +\
-				   "Total fails: {red}{{fails}}{reset}, " +\
-				   "Total: {light_blue}{{total}}{reset}\n")
-
-			text = text.format(
+			self.write(colourise("Total passes: {green}{passes}{reset}, " +
+				"Total fails: {red}{fails}{reset}, " +
+				"Total: {light_blue}{total}{reset}\n",
 				passes=hfst.passes,
 				fails=hfst.fails,
 				total=hfst.fails+hfst.passes
-			)
-
-			self.write(text)
+			))
 
 	class NormalOutput(AllOutput):
 		def title(self, text):
@@ -186,20 +182,26 @@ class MorphTest:
 			self.write(text + '\n')
 			self.write(colourise("-" * len(text) + '{reset}\n'))
 
-		def success(self, l, r):
-			self.write(colourise("[{green}PASS{reset}] %s {blue}=>{reset} %s\n" % (l, r)))
+		def success(self, case, total, left, right):
+			x = colourise(("[{case:>%d}/{total}] [{green}PASS{reset}] " +
+						  "{left} {blue}=>{reset} {right}\n") % len(str(total)),
+                          left=left, right=right, case=case, total=total)
+			self.write(x)
 
-		def failure(self, form, err, errlist):
-			self.write(colourise("[{red}FAIL{reset}] %s {blue}=>{reset} %s: %s\n" % (
-				form, err, ", ".join(errlist))))
+		def failure(self, case, total, left, right, errlist):
+			x = colourise(("[{case:>%d}/{total}] [{red}FAIL{reset}] " +
+						  "{left} {blue}=>{reset} {right}: {errlist}\n") % len(str(total)),
+                          left=left, right=right, case=case, total=total,
+                          errlist=", ".join(errlist))
+			self.write(x)
 
 		def result(self, title, test, counts):
 			p = counts["Pass"]
 			f = counts["Fail"]
-			text = colourise("\nTest {{n}} - Passes: {green}{{passes}}{reset}, " +
-				   "Fails: {red}{{fails}}{reset}, " +
-				   "Total: {light_blue}{{total}}{reset}\n")
-			text = text.format(n=test, passes=p, fails=f, total=p+f)
+			text = colourise("\nTest {n} - Passes: {green}{passes}{reset}, " +
+				   "Fails: {red}{fails}{reset}, " +
+				   "Total: {light_blue}{total}{reset}\n",
+                   n=test, passes=p, fails=f, total=p+f)
 			self.write(text)
 
 	class CompactOutput(AllOutput):
@@ -213,14 +215,14 @@ class MorphTest:
 			out = "%s %d/%d/%d" % (title, p, f, p+f)
 			if counts["Fail"] > 0:
 				if not self.args.hide_fail:
-					self.write(colourise("[{red}FAIL{reset}] %s\n" % out))
+					self.write(colourise("[{red}FAIL{reset}] {}\n", out))
 			elif not self.args.hide_pass:
-				self.write(colourise("[{green}PASS{reset}] %s\n" % out))
+				self.write(colourise("[{green}PASS{reset}] {}\n", out))
 
 	class TerseOutput(AllOutput):
-		def success(self, l, r):
+		def success(self, case, total, l, r):
 			self.write(colourise("{green}.{reset}"))
-		def failure(self, form, err, errlist):
+		def failure(self, case, total, form, err, errlist):
 			self.write(colourise("{red}!{reset}"))
 		def result(self, title, test, counts):
 			self.write('\n')
@@ -411,7 +413,10 @@ class MorphTest:
 
 		self.count[d] = {"Pass": 0, "Fail": 0}
 
-		for testcase in tests:
+		caseslen = len(tests)
+		for n, testcase in enumerate(tests):
+			n += 1 # off by one annoyance
+
 			test = testcase.input
 			forms = testcase.outputs
 
@@ -447,38 +452,40 @@ class MorphTest:
 						success.add(form)
 						self.count[d]["Pass"] += 1
 						if not self.args.hide_pass:
-							self.out.success(test, form)
+							self.out.success(n, caseslen, test, form)
 				for form in missing_detested:
 					passed = True
 					success.add(form)
 					self.count[d]["Pass"] += 1
 					if not self.args.hide_pass:
-						self.out.success(test, "<No '%s' %s>" % (form, desc.lower()))
+						self.out.success(n, caseslen, test, "<No '%s' %s>" % (form, desc.lower()))
 			else:
 				if len(invalid) == 1 and list(invalid)[0].endswith("+?"):
 					invalid = set()
 					passed = True
 					self.count[d]["Pass"] += 1
 					if not self.args.hide_pass:
-						self.out.success(test, "<No %s>" % desc.lower())
+						self.out.success(n, caseslen, test, "<No %s>" % desc.lower())
 
 			if len(missing) > 0:
 				if not self.args.hide_fail:
-					self.out.failure(test, "Missing results", missing)
-				self.count[d]["Fail"] += len(missing)
+					self.out.failure(n, caseslen, test, "Missing results", missing)
+				#self.count[d]["Fail"] += len(missing)
 			if len(invalid) > 0 and \
 					(not self.args.ignore_analyses or not passed):
 				if not self.args.hide_fail:
-					self.out.failure(test, "Unexpected results", invalid)
-				self.count[d]["Fail"] += len(invalid)
+					self.out.failure(n, caseslen, test, "Unexpected results", invalid)
+				#self.count[d]["Fail"] += len(invalid)
 			if len(detested) > 0:
 				if self.args.colour:
 					msg = colourise("{red}BROKEN!{reset}")
 				else:
 					msg = "BROKEN!"
 				if not self.args.hide_fail:
-					self.out.failure(test, msg + " Negative results", detested)
-				self.count[d]["Fail"] += len(detested)
+					self.out.failure(n, caseslen, test, msg + " Negative results", detested)
+				#self.count[d]["Fail"] += len(detested)
+			if len(detested) + len(missing) + len(invalid) > 0:
+				self.count[d]["Fail"] += 1
 
 		self.out.result(title, c, self.count[d])
 
