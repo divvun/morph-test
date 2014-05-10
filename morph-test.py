@@ -9,10 +9,6 @@
 
 from multiprocessing import Process, Manager
 from subprocess import Popen, PIPE
-from glob import glob
-from datetime import datetime
-from hashlib import sha1
-from tempfile import NamedTemporaryFile
 from argparse import ArgumentParser
 from io import StringIO
 from collections import OrderedDict, namedtuple
@@ -20,13 +16,9 @@ from collections import OrderedDict, namedtuple
 import os
 import os.path
 import re
-import urllib.request
 import shlex
-import itertools
-import traceback
-import time
+#import time
 import sys
-import codecs
 import yaml
 
 
@@ -170,6 +162,9 @@ class MorphTest:
 		def write(self, data):
 			self._io.write(data)
 
+		def info(self, data):
+			self.write(data)
+
 		def title(self, *args): pass
 		def success(self, *args): pass
 		def failure(self, *args): pass
@@ -235,6 +230,12 @@ class MorphTest:
 			else:
 				self.write(colourise("{green}PASS{reset}\n"))
 
+	class FinalOutput(AllOutput):
+		def final_result(self, counts):
+			p = counts.passes
+			f = counts.fails
+			self.write("Total %d/%d/%d\n" % (p, f, p+f))
+
 	class NoOutput(AllOutput):
 		def final_result(self, *args):
 			pass
@@ -251,9 +252,9 @@ class MorphTest:
 		self.load_config(self.args.test_file)
 
 	def run(self):
-		timing_begin = time.time()
+		#timing_begin = time.time()
 		self.run_tests(self.args.test)
-		self.timer = time.time() - timing_begin
+		#self.timer = time.time() - timing_begin
 		if self.fails > 0:
 			return 1
 		else:
@@ -299,14 +300,15 @@ class MorphTest:
 				"normal": MorphTest.NormalOutput,
 				"terse": MorphTest.TerseOutput,
 				"compact": MorphTest.CompactOutput,
-				"silent": MorphTest.NoOutput
+				"silent": MorphTest.NoOutput,
+				"final": MorphTest.FinalOutput
 			}.get(args.output, lambda x: None)(args)
 
 		if self.out is None:
 			raise AttributeError("Invalid output mode supplied: %s" % args.output)
 
 		if args.verbose:
-			self.out.write("`%s` will be used for parsing dictionaries.\n" % self.program[0])
+			self.out.info("`%s` will be used for parsing dictionaries.\n" % self.program[0])
 
 		# TODO: reintroduce the removal of colour!
 		#if not args.colour:
@@ -335,8 +337,7 @@ class MorphTest:
 				for t in config.surface_tests:
 					self.run_test(t, False)
 
-		if args.verbose or args.terse:
-			self.out.final_result(self)
+		self.out.final_result(self)
 
 	def parse_fsts(self, key=None):
 		args = self.args
@@ -365,17 +366,15 @@ class MorphTest:
 
 		if args.lexical:
 			gen = Process(target=parser, args=(self, "gen", self.gen, self.config.surface_tests))
-			gen.daemon = True
 			gen.start()
 			if self.args.verbose:
-				self.out.write("Generating...\n")
+				self.out.info("Generating...\n")
 
 		if args.surface:
 			morph = Process(target=parser, args=(self, "morph", self.morph, self.config.lexical_tests))
-			morph.daemon = True
 			morph.start()
 			if self.args.verbose:
-				self.out.write("Morphing...\n")
+				self.out.info("Morphing...\n")
 
 		if args.lexical:
 			gen.join()
@@ -383,7 +382,7 @@ class MorphTest:
 			morph.join()
 
 		if self.args.verbose:
-			self.out.write("Done!\n")
+			self.out.info("Done!\n")
 
 	def get_forms(self, test, forms):
 		if test.startswith('~'):
@@ -617,7 +616,7 @@ class UI(ArgumentParser):
 			action="store_true", help="Colours the output")
 		self.add_argument("-o", "--output",
 			dest="output", default="normal",
-			help="Desired output style: compact, terse, normal (Default: normal)")
+			help="Desired output style: compact, terse, final, normal (Default: normal)")
 		self.add_argument("-q", "--silent",
 			dest="silent", action="store_true",
 			help="Hide all output; exit code only")
