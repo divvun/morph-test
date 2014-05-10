@@ -159,9 +159,16 @@ class TestFile:
 		return a
 
 class MorphTest:
-	class AllOutput(StringIO):
+	class AllOutput():
+		def __init__(self, args):
+			self._io = StringIO()
+			self.args = args
+
 		def __str__(self):
-			return self.getvalue()
+			return self._io.getvalue()
+
+		def write(self, data):
+			self._io.write(data)
 
 		def title(self, *args): pass
 		def success(self, *args): pass
@@ -183,16 +190,16 @@ class MorphTest:
 			self.write(colourise("-" * len(text) + '{reset}\n'))
 
 		def success(self, case, total, left, right):
-			x = colourise(("[{case:>%d}/{total}] [{green}PASS{reset}] " +
+			x = colourise(("[{light_blue}{case:>%d}/{total}{reset}][{green}PASS{reset}] " +
 						  "{left} {blue}=>{reset} {right}\n") % len(str(total)),
-                          left=left, right=right, case=case, total=total)
+						  left=left, right=right, case=case, total=total)
 			self.write(x)
 
 		def failure(self, case, total, left, right, errlist):
-			x = colourise(("[{case:>%d}/{total}] [{red}FAIL{reset}] " +
+			x = colourise(("[{light_blue}{case:>%d}/{total}{reset}][{red}FAIL{reset}] " +
 						  "{left} {blue}=>{reset} {right}: {errlist}\n") % len(str(total)),
-                          left=left, right=right, case=case, total=total,
-                          errlist=", ".join(errlist))
+						  left=left, right=right, case=case, total=total,
+						  errlist=", ".join(errlist))
 			self.write(x)
 
 		def result(self, title, test, counts):
@@ -201,14 +208,10 @@ class MorphTest:
 			text = colourise("\nTest {n} - Passes: {green}{passes}{reset}, " +
 				   "Fails: {red}{fails}{reset}, " +
 				   "Total: {light_blue}{total}{reset}\n",
-                   n=test, passes=p, fails=f, total=p+f)
+				   n=test, passes=p, fails=f, total=p+f)
 			self.write(text)
 
 	class CompactOutput(AllOutput):
-		def __init__(self, args):
-			super().__init__()
-			self.args = args
-
 		def result(self, title, test, counts):
 			p = counts["Pass"]
 			f = counts["Fail"]
@@ -233,7 +236,8 @@ class MorphTest:
 				self.write(colourise("{green}PASS{reset}\n"))
 
 	class NoOutput(AllOutput):
-		pass
+		def final_result(self, *args):
+			pass
 
 	def __init__(self, args):
 		self.args = args
@@ -276,10 +280,10 @@ class MorphTest:
 		self.gen = args.gen or config.gen
 		self.morph = args.morph or config.morph
 
-		#if args.surface:
-		#	self.gen = None
-		#if args.lexical:
-		#	self.morph = None
+		if args.surface:
+			self.gen = None
+		if args.lexical:
+			self.morph = None
 
 		if self.gen == self.morph == None:
 			raise AttributeError("One of Gen or Morph must be configured.")
@@ -289,13 +293,17 @@ class MorphTest:
 				raise IOError("File %s does not exist." % i)
 
 		if args.silent:
-			self.out = MorphTest.NoOutput()
-		elif args.terse:
-			self.out = MorphTest.TerseOutput()
-		elif args.compact:
-			self.out = MorphTest.CompactOutput(args)
+			self.out = MorphTest.NoOutput(args)
 		else:
-			self.out = MorphTest.NormalOutput()
+			self.out = {
+				"normal": MorphTest.NormalOutput,
+				"terse": MorphTest.TerseOutput,
+				"compact": MorphTest.CompactOutput,
+				"silent": MorphTest.NoOutput
+			}.get(args.output, lambda x: None)(args)
+
+		if self.out is None:
+			raise AttributeError("Invalid output mode supplied: %s" % args.output)
 
 		if args.verbose:
 			self.out.write("`%s` will be used for parsing dictionaries.\n" % self.program[0])
@@ -356,14 +364,14 @@ class MorphTest:
 				self.results[d] = self.parse_fst_output(res)
 
 		if args.lexical:
-			gen = Process(target=parser, args=(self, "gen", self.gen, self.config.lexical_tests))
+			gen = Process(target=parser, args=(self, "gen", self.gen, self.config.surface_tests))
 			gen.daemon = True
 			gen.start()
 			if self.args.verbose:
 				self.out.write("Generating...\n")
 
 		if args.surface:
-			morph = Process(target=parser, args=(self, "morph", self.morph, self.config.surface_tests))
+			morph = Process(target=parser, args=(self, "morph", self.morph, self.config.lexical_tests))
 			morph.daemon = True
 			morph.start()
 			if self.args.verbose:
@@ -396,12 +404,12 @@ class MorphTest:
 		if is_lexical:
 			desc = "Lexical/Generation"
 			f = "gen"
-			tests = self.config.lexical_tests[data]
+			tests = self.config.surface_tests[data]
 
 		else: #surface
 			desc = "Surface/Analysis"
 			f = "morph"
-			tests = self.config.surface_tests[data]
+			tests = self.config.lexical_tests[data]
 
 		if self.results.get('err'):
 			raise LookupError('`%s` had an error:\n%s' % (self.program, self.results['err']))
@@ -471,10 +479,11 @@ class MorphTest:
 				if not self.args.hide_fail:
 					self.out.failure(n, caseslen, test, "Missing results", missing)
 				#self.count[d]["Fail"] += len(missing)
-			if len(invalid) > 0 and \
-					(not self.args.ignore_analyses or not passed):
-				if not self.args.hide_fail:
+			if len(invalid) > 0:
+				if not self.args.ignore_analyses or not passed and not self.args.hide_fail:
 					self.out.failure(n, caseslen, test, "Unexpected results", invalid)
+				else:
+					invalid = set() # hide this for the final check
 				#self.count[d]["Fail"] += len(invalid)
 			if len(detested) > 0:
 				if self.args.colour:
@@ -513,7 +522,7 @@ class MorphTest:
 		return parsed
 
 	def __str__(self):
-		return self.out.getvalue()
+		return str(self.out)
 
 
 def parse_lexc(f, fallback=None):
@@ -606,13 +615,10 @@ class UI(ArgumentParser):
 
 		self.add_argument("-c", "--colour", dest="colour",
 			action="store_true", help="Colours the output")
-		self.add_argument("-C", "--compact",
-			dest="compact", action="store_true",
-			help="Makes output more compact")
-		self.add_argument("--terse",
-			dest="terse", action="store_true",
-			help="Show only PASS or FAIL for whole test.")
-		self.add_argument("--silent",
+		self.add_argument("-o", "--output",
+			dest="output", default="normal",
+			help="Desired output style: compact, terse, normal (Default: normal)")
+		self.add_argument("-q", "--silent",
 			dest="silent", action="store_true",
 			help="Hide all output; exit code only")
 		self.add_argument("-i", "--ignore-extra-analyses",
