@@ -478,12 +478,14 @@ class MorphTest:
                 if not self.args.hide_fail:
                     self.out.failure(n, caseslen, test, "Missing results", missing)
                 #self.count[d]["Fail"] += len(missing)
-            if len(invalid) > 0:
-                if not self.args.ignore_analyses or not passed and not self.args.hide_fail:
+            
+            if len(invalid) > 0 and (not self.args.ignore_analyses or not passed):
+                if not self.args.hide_fail:
                     self.out.failure(n, caseslen, test, "Unexpected results", invalid)
-                else:
-                    invalid = set() # hide this for the final check
+            else:
+                invalid = set() # hide this for the final check
                 #self.count[d]["Fail"] += len(invalid)
+            
             if len(detested) > 0:
                 if self.args.colour:
                     msg = colourise("{red}BROKEN!{reset}")
