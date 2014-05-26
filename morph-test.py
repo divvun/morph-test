@@ -477,7 +477,7 @@ class MorphTest:
                 #self.count[d]["Fail"] += len(missing)
             
             if len(invalid) > 0:
-                if self.args.ignore_analyses:
+                if not is_lexical and self.args.ignore_analyses:
                     invalid = set() # hide this for the final check
                 elif not self.args.hide_fail:
                     self.out.failure(n, caseslen, test, "Unexpected results", invalid)
