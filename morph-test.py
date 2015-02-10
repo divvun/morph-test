@@ -147,7 +147,7 @@ class TestFile:
     def app(self):
         a = self.data.get("Config", {}).get(self._system, {}).get("App", None)
         if a is None:
-            a = "hfst-lookup" if self._system == "hfst" else "lookup"
+            a = ["hfst-lookup"] if self._system == "hfst" else ["lookup", "-flags", "mbTT"]
         return a
 
 class MorphTest:
@@ -275,7 +275,10 @@ class MorphTest:
 
         config = self.config
 
-        self.program = shlex.split(args.app or config.app)
+        if args.app is not None:
+            self.program = shlex.split(args.app)
+        else:
+            self.program = config.app
         check_path_exists([self.program[0]])
 
         self.gen = args.gen or config.gen
@@ -475,14 +478,14 @@ class MorphTest:
                 if not self.args.hide_fail:
                     self.out.failure(n, caseslen, test, "Missing results", missing)
                 #self.count[d]["Fail"] += len(missing)
-            
+
             if len(invalid) > 0:
                 if not is_lexical and self.args.ignore_analyses:
                     invalid = set() # hide this for the final check
                 elif not self.args.hide_fail:
                     self.out.failure(n, caseslen, test, "Unexpected results", invalid)
                 #self.count[d]["Fail"] += len(invalid)
-            
+
             if len(detested) > 0:
                 if self.args.colour:
                     msg = colourise("{red}BROKEN!{reset}")
@@ -584,7 +587,7 @@ def parse_lexc_trans(f, gen=None, morph=None, app=None, fallback=None, lookup="h
 
     lexc = parse_lexc(f, fallback)[trans]
     if app is None:
-        app = "hfst-lookup" if lookup == "hfst" else "lookup"
+        app = ["hfst-lookup"] if lookup == "hfst" else ["lookup", "-flags", "mbTT"]
     config = {lookup: {"Gen": gen, "Morph": morph, "App": app}}
     return {"Config": config, "Tests": lexc}
 
