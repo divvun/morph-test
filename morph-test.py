@@ -275,10 +275,7 @@ class MorphTest:
 
         config = self.config
 
-        if args.app is not None:
-            self.program = shlex.split(args.app)
-        else:
-            self.program = config.app
+        self.program = args.app or config.app
         check_path_exists([self.program[0]])
 
         self.gen = args.gen or config.gen
@@ -652,14 +649,14 @@ class UI(ArgumentParser):
             dest="verbose", action="store_true",
             help="More verbose output.")
 
-        self.add_argument("--app", dest="app", nargs='?', required=False,
+        self.add_argument("--app", dest="app", nargs='*', required=False,
             help="Override application used for test")
         self.add_argument("--gen", dest="gen", nargs='?', required=False,
             help="Override generation transducer used for test")
         self.add_argument("--morph", dest="morph", nargs='?', required=False,
             help="Override morph transducer used for test")
 
-        self.add_argument("test_file", nargs='?',
+        self.add_argument("test_file",
             help="YAML file with test rules")
 
         self.test = MorphTest(self.parse_args())
