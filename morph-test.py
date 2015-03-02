@@ -147,7 +147,12 @@ class TestFile:
     def app(self):
         a = self.data.get("Config", {}).get(self._system, {}).get("App", None)
         if a is None:
-            a = ["hfst-lookup"] if self._system == "hfst" else ["lookup", "-flags", "mbTT"]
+            if self._system == "hfst":
+                return ['hfst-lookup']
+            elif self._system == "xerox":
+                return ["lookup", "-flags", "mbTT"]
+            else:
+                raise Exception("Unknown system: '%s'" % self._system)
         return a
 
 class MorphTest:
@@ -269,13 +274,13 @@ class MorphTest:
                     args.morph,
                     args.app,
                     args.transducer,
-                    args.section))
+                    args.section), args.section)
         else:
-            self.config = TestFile(yaml_load_ordered(open(fn)))
+            self.config = TestFile(yaml_load_ordered(open(fn)), args.section)
 
         config = self.config
 
-        self.program = args.app or config.app
+        self.program = string_to_list(args.app or config.app)
         check_path_exists([self.program[0]])
 
         self.gen = args.gen or config.gen
@@ -585,7 +590,7 @@ def parse_lexc_trans(f, gen=None, morph=None, app=None, fallback=None, lookup="h
     lexc = parse_lexc(f, fallback)[trans]
     if app is None:
         app = ["hfst-lookup"] if lookup == "hfst" else ["lookup", "-flags", "mbTT"]
-    config = {lookup: {"Gen": gen, "Morph": morph, "App": app}}
+    config = {lookup: {"Gen": gen, "Morph": morph, "App": string_to_list(app)}}
     return {"Config": config, "Tests": lexc}
 
 def lexc_to_yaml_string(data):
@@ -606,9 +611,7 @@ class UI(ArgumentParser):
     def __init__(self):
         ArgumentParser.__init__(self)
 
-        self.description="""Test morphological transducers for consistency.
-            `hfst-lookup` (or Xerox' `lookup` with argument -x) must be
-            available on the PATH."""
+        self.description="""Test morphological transducers for consistency."""
         self.epilog="Will run all tests in the test_file by default."
 
         self.add_argument("-c", "--colour", dest="colour",
@@ -635,7 +638,7 @@ class UI(ArgumentParser):
         self.add_argument("-p", "--hide-passes",
             dest="hide_pass", action="store_true",
             help="Suppresses failures to make finding passes easier")
-        self.add_argument("-S", "--section", default=["hfst"],
+        self.add_argument("-S", "--section", default="hfst",
             dest="section", nargs='?', required=False,
             help="The section to be used for testing (default is `hfst`)")
         self.add_argument("-t", "--test",
