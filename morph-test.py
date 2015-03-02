@@ -17,7 +17,7 @@ import os
 import os.path
 import re
 import shlex
-#import time
+import shutil
 import sys
 import yaml
 
@@ -54,15 +54,10 @@ def colourise(string, *args, **kwargs):
     kwargs.update(colors)
     return string.format(*args, **kwargs)
 
-def check_path_exists(programs):
-    out = {}
-    for p in programs:
-        for path in os.environ.get('PATH', '').split(':'):
-            if os.path.exists(os.path.join(path, p)) and \
-               not os.path.isdir(os.path.join(path, p)):
-                    out[p] = os.path.join(path, p)
-        if not out.get(p):
-            raise EnvironmentError("Cannot find `%s`. Check $PATH." % p)
+def check_path_exists(program):
+    out = shutil.which(program)
+    if out is None:
+        raise EnvironmentError("Cannot find `%s`. Check $PATH." % p)
     return out
 
 # SUPPORT CLASSES
@@ -281,7 +276,7 @@ class MorphTest:
         config = self.config
 
         self.program = string_to_list(args.app or config.app)
-        check_path_exists([self.program[0]])
+        check_path_exists(self.program[0])
 
         self.gen = args.gen or config.gen
         self.morph = args.morph or config.morph
