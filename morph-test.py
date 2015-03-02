@@ -57,7 +57,7 @@ def colourise(string, *args, **kwargs):
 def check_path_exists(program):
     out = shutil.which(program)
     if out is None:
-        raise EnvironmentError("Cannot find `%s`. Check $PATH." % p)
+        raise EnvironmentError("Cannot find `%s`. Check $PATH." % program)
     return out
 
 # SUPPORT CLASSES
@@ -647,7 +647,8 @@ class UI(ArgumentParser):
             dest="verbose", action="store_true",
             help="More verbose output.")
 
-        self.add_argument("--app", dest="app", nargs='*', required=False,
+        self.add_argument("--app", dest="app", type=lambda x: x.split(),
+            nargs='?', required=False,
             help="Override application used for test")
         self.add_argument("--gen", dest="gen", nargs='?', required=False,
             help="Override generation transducer used for test")
@@ -670,9 +671,9 @@ def main():
         ui.start()
     except KeyboardInterrupt:
         sys.exit(130)
-    except Exception as e:
-        print("Error: %r" % e)
-        sys.exit(1)
+    #except Exception as e:
+    #    print("Error: %r" % e)
+    #    sys.exit(1)
 
 if __name__ == "__main__":
     main()
