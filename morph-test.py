@@ -670,9 +670,9 @@ def main():
         ui.start()
     except KeyboardInterrupt:
         sys.exit(130)
-    #except Exception as e:
-    #    print("Error: %r" % e)
-    #    sys.exit(1)
+    except Exception as e:
+        print("Error: %r" % e)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
