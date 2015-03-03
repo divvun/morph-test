@@ -278,7 +278,7 @@ class MorphTest:
         app = args.app or config.app
         if isinstance(app, str):
             app = app.split(" ")
-        self.program = string_to_list(app)
+        self.program = app
         check_path_exists(self.program[0])
 
         self.gen = args.gen or config.gen
