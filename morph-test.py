@@ -275,7 +275,10 @@ class MorphTest:
 
         config = self.config
 
-        self.program = string_to_list(args.app or config.app)
+        app = args.app or config.app
+        if isinstance(app, str):
+            app = app.split(" ")
+        self.program = string_to_list(app)
         check_path_exists(self.program[0])
 
         self.gen = args.gen or config.gen
@@ -647,8 +650,7 @@ class UI(ArgumentParser):
             dest="verbose", action="store_true",
             help="More verbose output.")
 
-        self.add_argument("--app", dest="app", type=lambda x: x.split(),
-            nargs='?', required=False,
+        self.add_argument("--app", dest="app", nargs='?', required=False,
             help="Override application used for test")
         self.add_argument("--gen", dest="gen", nargs='?', required=False,
             help="Override generation transducer used for test")
