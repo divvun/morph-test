@@ -234,7 +234,7 @@ class MorphTest:
         def final_result(self, counts):
             p = counts.passes
             f = counts.fails
-            self.write("Total %d/%d/%d\n" % (p, f, p+f))
+            self.write("%d/%d/%d " % (p, f, p+f))
 
     class NoOutput(AllOutput):
         def final_result(self, *args):
@@ -278,7 +278,7 @@ class MorphTest:
         app = args.app or config.app
         if isinstance(app, str):
             app = app.split(" ")
-        self.program = app
+        self.program = string_to_list(app)
         check_path_exists(self.program[0])
 
         self.gen = args.gen or config.gen
@@ -413,6 +413,8 @@ class MorphTest:
             f = "morph"
             tests = self.config.lexical_tests[data]
 
+        res = self.results[f]
+
         if self.results.get('err'):
             raise LookupError('`%s` had an error:\n%s' % (self.program, self.results['err']))
 
@@ -430,7 +432,7 @@ class MorphTest:
             test = testcase.input
             forms = testcase.outputs
 
-            actual_results = set(self.results[f][test.lstrip("~")])
+            actual_results = set(res[test.lstrip("~")])
             test, detested_results, expected_results = self.get_forms(test, forms)
 
             missing = set()
