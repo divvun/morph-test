@@ -1,11 +1,7 @@
-# A tailored & stand-alone copy of the morph-test.py module of Apertium Quality
-# (http://wiki.apertium.org/wiki/Apertium-quality). Requires at least python3.1
-# but autconf should check that for you. Also requires that you have a proper
-# installation of py-yaml, but that as well should be handled by autoconf/
-# configure.ac.
-#
 # This script is used to run the yaml test cases for morphology & morphophonology
 # tests.
+#
+# License: CC0 (see LICENSE)
 
 from multiprocessing import Process, Manager
 from subprocess import Popen, PIPE
