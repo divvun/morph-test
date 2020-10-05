@@ -90,3 +90,13 @@ Comments can be freely added, marked with an initial `#`.
 A test run succeeds if all and only the listed word forms are generated, and the word forms listed only get the specified analyses.
 
 All languages contain a certain amount of homonymy, which makes the `-i, --ignore-extra-analyses` option very useful: it makes the tests pass even if there are alternative analyses of a given word form. That is, homonym analyses won't destroy the test results.
+
+# License
+
+Licensed under [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/).
+
+# Contribution
+
+Fork and PR on Github.
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you shall be licensed as above, without any additional terms or conditions.
