@@ -3,7 +3,7 @@ An open-source test tool for rule-based FST moprhological analysers. `morph-test
 
 # Installation
 
-Clone and run as shown below.
+Clone or download and run as shown below.
 
 # Usage
 
