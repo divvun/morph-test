@@ -626,10 +626,10 @@ class UI(ArgumentParser):
             help="Lexical input/generation tests only")
         self.add_argument("-f", "--hide-fails",
             dest="hide_fail", action="store_true",
-            help="Suppresses passes to make finding failures easier")
+            help="Suppresses fails to make finding passes easier")
         self.add_argument("-p", "--hide-passes",
             dest="hide_pass", action="store_true",
-            help="Suppresses failures to make finding passes easier")
+            help="Suppresses passes to make finding fails easier")
         self.add_argument("-S", "--section", default="hfst",
             dest="section", nargs='?', required=False,
             help="The section to be used for testing (default is `hfst`)")
