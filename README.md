@@ -1,6 +1,10 @@
 # morph-test
 An open-source test tool for rule-based FST moprhological analysers. `morph-test` is at the core of the morphological testing regime in the [GiellaLT](https://github.com/giellalt) infrastructure.
 
+# Installation
+
+Clone and run as shown below.
+
 # Usage
 
 ```
