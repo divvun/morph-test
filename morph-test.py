@@ -610,7 +610,7 @@ class UI(ArgumentParser):
             action="store_true", help="Colours the output")
         self.add_argument("-o", "--output",
             dest="output", default="normal",
-            help="Desired output style: compact, terse, final, normal (Default: normal)")
+            help="Desired output style: normal, compact, terse, final (Default: normal)")
         self.add_argument("-q", "--silent",
             dest="silent", action="store_true",
             help="Hide all output; exit code only")
