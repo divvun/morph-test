@@ -167,7 +167,7 @@ Test 5 - Passes: 11, Fails: 0, Total: 11
 Total passes: 70, Total fails: 8, Total: 78
 
 ```
-- **compact**: Report the failed tests and print a summary:
+- **compact**: Report the test names and result for each, and print a summary:
 
 ```
 [PASS] Test 0: Adjective - antisosiálla (Lexical/Generation) 12/0/12
