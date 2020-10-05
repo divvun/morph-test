@@ -9,7 +9,8 @@ Clone and run as shown below.
 
 ```
 python3 morph-test.py -h
-usage: morph-test.py [-h] [-c] [-o OUTPUT] [-q] [-i] [-s] [-l] [-f] [-p] [-S [SECTION]] [-t [TEST]] [-F [TRANSDUCER]] [-v] [--app [APP]]
+usage: morph-test.py [-h] [-c] [-o OUTPUT] [-q] [-i] [-s] [-l] [-f] [-p] [-S [SECTION]]
+                     [-t [TEST]] [-F [TRANSDUCER]] [-v] [--app [APP]]
                      [--gen [GEN]] [--morph [MORPH]]
                      test_file
 
@@ -25,7 +26,8 @@ optional arguments:
                         Desired output style: compact, terse, final, normal (Default: normal)
   -q, --silent          Hide all output; exit code only
   -i, --ignore-extra-analyses
-                        Ignore extra analyses when there are more than expected, will PASS if the expected one is found.
+                        Ignore extra analyses when there are more than expected, will PASS
+                        if the expected one is found.
   -s, --surface         Surface input/analysis tests only
   -l, --lexical         Lexical input/generation tests only
   -f, --hide-fails      Suppresses passes to make finding failures easier
@@ -33,7 +35,8 @@ optional arguments:
   -S [SECTION], --section [SECTION]
                         The section to be used for testing (default is `hfst`)
   -t [TEST], --test [TEST]
-                        Which test to run (Default: all). TEST = test ID, e.g. 'Noun - gåetie' (remember quotes if the ID contains spaces)
+                        Which test to run (Default: all). TEST = test ID, e.g.
+                        'Noun - gåetie' (remember quotes if the ID contains spaces)
   -F [TRANSDUCER], --fallback [TRANSDUCER]
                         Which fallback transducer to use.
   -v, --verbose         More verbose output.
