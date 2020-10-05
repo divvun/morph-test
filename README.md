@@ -205,6 +205,7 @@ Verbose mode (`-v, --verbose`) adds test run metadata:
 Generating...
 Morphing...
 Done!
+[... test results ...]
 ```
 
 Silent or quiet mode (`-q, --silent `) blocks all output, and only returns the exit value (`0` for `PASS`, `1` for `FAIL`).
