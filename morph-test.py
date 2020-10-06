@@ -639,7 +639,7 @@ class UI(ArgumentParser):
             'Noun - g\u00E5etie' (remember quotes if the ID contains spaces)""")
         self.add_argument("-F", "--fallback",
             dest="transducer", nargs='?', required=False,
-            help="""Which fallback transducer to use.""")
+            help="""Which fallback transducer to use (ignored, use --gen and --morph).""")
         self.add_argument("-v", "--verbose",
             dest="verbose", action="store_true",
             help="More verbose output.")
