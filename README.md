@@ -30,8 +30,8 @@ optional arguments:
                         if the expected one is found.
   -s, --surface         Surface input/analysis tests only
   -l, --lexical         Lexical input/generation tests only
-  -f, --hide-fails      Suppresses passes to make finding failures easier
-  -p, --hide-passes     Suppresses failures to make finding passes easier
+  -f, --hide-fails      Suppresses fails to make finding passes easier
+  -p, --hide-passes     Suppresses passes to make finding failures easier
   -S [SECTION], --section [SECTION]
                         The section to be used for testing (default is `hfst`)
   -t [TEST], --test [TEST]
