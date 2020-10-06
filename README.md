@@ -31,14 +31,14 @@ optional arguments:
   -s, --surface         Surface input/analysis tests only
   -l, --lexical         Lexical input/generation tests only
   -f, --hide-fails      Suppresses fails to make finding passes easier
-  -p, --hide-passes     Suppresses passes to make finding failures easier
+  -p, --hide-passes     Suppresses passes to make finding fails easier
   -S [SECTION], --section [SECTION]
                         The section to be used for testing (default is `hfst`)
   -t [TEST], --test [TEST]
                         Which test to run (Default: all). TEST = test ID, e.g.
                         'Noun - gåetie' (remember quotes if the ID contains spaces)
   -F [TRANSDUCER], --fallback [TRANSDUCER]
-                        Which fallback transducer to use.
+                        Which fallback transducer to use (ignored, use --gen and --morph).
   -v, --verbose         More verbose output.
   --app [APP]           Override application used for test
   --gen [GEN]           Override generation transducer used for test
