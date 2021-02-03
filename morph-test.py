@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # This script is used to run the yaml test cases for morphology & morphophonology
 # tests.
 #
