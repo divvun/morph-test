@@ -271,6 +271,12 @@ class MorphTest:
         else:
             self.config = TestFile(yaml_load_ordered(open(fn)), args.section)
 
+        d = os.path.dirname(fn)
+        if d:
+            os.chdir(os.path.dirname(fn))
+        # we've loaded the test file, now let all paths be
+        # relative to that file
+
         config = self.config
 
         app = args.app or config.app
