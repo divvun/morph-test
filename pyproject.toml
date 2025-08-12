@@ -3,6 +3,10 @@ name = "morph-test"
 version = "0.1.0"
 description = "Morphological FST testing for HFST automata and YAML test descriptions"
 authors = [
+    {name = "Brenadan Molloy"},
+    {name = "Sjur N Moshagen"},
+    {name = "Jonathan Washington"},
+    {name = "Daniel Swanson"},
     {name = "Flammie A Pirinen",email = "flammie@iki.fi"}
 ]
 license = {text = "CC0"}
