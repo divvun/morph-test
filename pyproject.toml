@@ -1,0 +1,19 @@
+[project]
+name = "morph-test"
+version = "0.1.0"
+description = "Morphological FST testing for HFST automata and YAML test descriptions"
+authors = [
+    {name = "Flammie A Pirinen",email = "flammie@iki.fi"}
+]
+license = {text = "CC0"}
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "pyyaml (>=6.0.2,<7.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
