@@ -1,5 +1,5 @@
 [project]
-name = "morph-test"
+name = "gtmorphtest"
 version = "0.1.0"
 description = "Morphological FST testing for HFST automata and YAML test descriptions"
 authors = [
@@ -21,3 +21,5 @@ dependencies = [
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry.scripts]
+gtmorphtest = "gtmorphtest.gtmorphtest:main"
