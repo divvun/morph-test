@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Morphological FST testing for HFST automata and YAML test descriptions"
 authors = [
     {name = "Brendan Molloy"},
-    {name = "Sjur N Moshagen"},
+    {name = "Sjur N Moshagen",email = "sjurnm@mac.com"},
     {name = "Jonathan Washington"},
     {name = "Daniel Swanson"},
     {name = "Flammie A Pirinen",email = "flammie@iki.fi"}
