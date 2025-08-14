@@ -1,21 +1,20 @@
-[project]
+[tool.poetry]
 name = "gtmorphtest"
 version = "0.1.0"
 description = "Morphological FST testing for HFST automata and YAML test descriptions"
 authors = [
-    {name = "Brendan Molloy"},
-    {name = "Sjur N Moshagen",email = "sjurnm@mac.com"},
-    {name = "Jonathan Washington"},
-    {name = "Daniel Swanson"},
-    {name = "Flammie A Pirinen",email = "flammie@iki.fi"}
+    "Brendan Molloy",
+    "Sjur N Moshagen <sjurnm@mac.com>",
+    "Jonathan Washington",
+    "Daniel Swanson",
+    "Flammie A Pirinen <flammie@iki.fi>"
 ]
-license = {text = "CC0"}
+license = "CC0"
 readme = "README.md"
-requires-python = ">=3.9"
-dependencies = [
-    "pyyaml (>=6.0.2,<7.0.0)"
-]
 
+[tool.poetry.dependencies]
+python = "^3.9"
+pyyaml = ">=6.0.2,<7.0.0"
 
 [build-system]
 requires = ["poetry-core"]
