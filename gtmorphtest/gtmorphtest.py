@@ -316,7 +316,7 @@ class MorphTest:
         if args.verbose:
             self.out.info("`%s` will be used for parsing dictionaries.\n" % self.program[0])
 
-        if not args.colour:
+        if not args.colour and not sys.stdout.isatty():
             for key in list(COLORS.keys()):
                 COLORS[key] = ""
 
