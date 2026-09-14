@@ -17,6 +17,8 @@ from subprocess import PIPE, Popen
 
 import yaml
 
+from . import __version__
+
 TestCase = namedtuple("TestCase", ["input", "outputs"])
 
 
@@ -654,6 +656,9 @@ class UI(ArgumentParser):
             """Test morphological transducers for consistency."""
         self.epilog = "Will run all tests in the test_file by default."
 
+        self.add_argument("-V", "--version", action="version",
+                          version=f"%(prog)s {__version__}",
+                          help="print version info")
         self.add_argument("-c", "--colour", dest="colour",
                           action="store_true", help="Colours the output")
         self.add_argument("-o", "--output",
