@@ -750,7 +750,7 @@ class MorphTest:
 
         if self.results.get("err"):
             raise LookupError(f"`{self.program}` had an "
-                              f"error:\n{self.results["err"]}")
+                              f"error:\n{self.results['err']}")
 
         c = len(self.count)
         d = f"{data} ({desc})"
