@@ -578,7 +578,8 @@ class MorphTest:
                 "terse": MorphTest.TerseOutput,
                 "compact": MorphTest.CompactOutput,
                 "silent": MorphTest.NoOutput,
-                "final": MorphTest.FinalOutput
+                "final": MorphTest.FinalOutput,
+                "json": MorphTest.NoOutput  # TODO: implement JSON output
             }.get(args.output, lambda x: None)(args)
 
         if self.out is None:
@@ -1018,7 +1019,7 @@ def lexc_to_yaml_string(
                 if len(rights) == 1:
                     out.write(f"    {left}: {rights[0]}\n")
                 elif len(rights) > 1:
-                    out.write(f"    {left}: [{" ".join(rights)}]\n")
+                    out.write(f"    {left}: [{' '.join(rights)}]\n")
     return out.getvalue()
 
 
@@ -1043,8 +1044,10 @@ class UI(ArgumentParser):
                           action="store_true", help="Colours the output")
         self.add_argument("-o", "--output",
                           dest="output", default="normal",
+                          choices=["normal", "compact", "terse", "final",
+                                   "json"],
                           help="Desired output style: normal, compact, "
-                          "terse, final (Default: normal)")
+                          "terse, final, json (Default: normal)")
         self.add_argument("-q", "--silent",
                           dest="silent", action="store_true",
                           help="Hide all output; exit code only")
