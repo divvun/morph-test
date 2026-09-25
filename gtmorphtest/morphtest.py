@@ -151,44 +151,79 @@ class MorphTest:
 
     class JsonOutput(AllOutput):
         """JSON formatter: one object per test case, plus a summary object."""
+        def __init__(self, args: Namespace) -> None:
+            """JSON output formatter, needs to start with opening bracket.
+            Args:
+                args: The parsed command-line arguments.
+            """
+            super().__init__(args)
+            self.write("[\n")
+            self.need_comma = False
+            self.need_closing_bracket = False
+
         def title(self, text: str) -> None:
             """Write a JSON object for the test heading."""
-            self.write(f"{{\"title\": {text}}}\n")
+            if self.need_closing_bracket:
+                self.write("],\n}\n")
+                self.need_closing_bracket = False
+            elif self.need_comma:
+                self.write(",\n")
+            self.write(f"{{\"title\": \"{text}\", \"tests\": [\n")
+            self.need_comma = False
 
         def success(
             self, case: int, total: int, left: str, right: str,
         ) -> None:
             """Write a JSON object for one passing case."""
+            if self.need_comma:
+                self.write(",\n")
             out = f"{{\"case\": {case}, \"total\": {total}, "\
-                  f"\"input\": {left}, \"output\": {right}, "\
+                  f"\"input\": \"{left}\", \"output\": \"{right}\", "\
                   f"\"result\": \"PASS\"}}"
             if not self.args.hide_pass:
-                self.write(out + "\n")
+                self.write(out)
+                self.need_comma = True
 
         def failure(
             self, case: int, total: int, left: str, right: str,
             errlist: Iterable[str],
         ) -> None:
             """Write a JSON object for one failing case."""
+            if self.need_comma:
+                self.write(",\n")
+            formatted_errlist = "[" + \
+                ", ".join(f"\"{e}\"" for e in errlist) + \
+                "]"
             out = f"{{\"case\": {case}, \"total\": {total}, "\
-                  f"\"input\": {left}, \"output\": {right}, "\
+                  f"\"input\": \"{left}\", \"output\": \"{right}\", "\
                   f"\"result\": \"FAIL\", "\
-                  f"\"errors\": {list(errlist)}}}"
+                  f"\"errors\": {formatted_errlist}}}"
             if not self.args.hide_fail:
-                self.write(out + "\n")
+                self.write(out)
+                self.need_comma = True
 
         def result(
             self, title: str, test: str, counts: dict[str, int],
         ) -> None:
             """Write a single JSON object summarising the test."""
+            self.write("],\n")
             p = counts["Pass"]
             f = counts["Fail"]
-            out = f"{{\"title\": {title}, \"passes\": {p}, \"fails\": {f}}}"
+            out = f"\"passes\": {p}, \"fails\": {f}"
             if counts["Fail"] > 0:
                 if not self.args.hide_fail:
                     self.write(out)
             elif not self.args.hide_pass:
                 self.write(out)
+            self.write("\n}")
+            self.need_comma = True
+
+        def final_result(self, counts: MorphTest) -> None:
+            """Write a single JSON object summarising the run as a whole."""
+            p = counts.passes
+            f = counts.fails
+            out = f",\n{{\"total_passes\": {p}, \"total_fails\": {f}}}\n]\n"
+            self.write(out)
 
     class CompactOutput(AllOutput):
         """One line per test: a PASS/FAIL marker and the counts."""
@@ -347,7 +382,7 @@ class MorphTest:
                 "compact": MorphTest.CompactOutput,
                 "silent": MorphTest.NoOutput,
                 "final": MorphTest.FinalOutput,
-                "json": MorphTest.NoOutput  # TODO: implement JSON output
+                "json": MorphTest.JsonOutput
             }.get(args.output, lambda x: None)(args)
 
         if self.out is None:
