@@ -149,6 +149,47 @@ class MorphTest:
                              n=test, passes=p, fails=f, total=p+f)
             self.write(text)
 
+    class JsonOutput(AllOutput):
+        """JSON formatter: one object per test case, plus a summary object."""
+        def title(self, text: str) -> None:
+            """Write a JSON object for the test heading."""
+            self.write(f"{{\"title\": {text}}}\n")
+
+        def success(
+            self, case: int, total: int, left: str, right: str,
+        ) -> None:
+            """Write a JSON object for one passing case."""
+            out = f"{{\"case\": {case}, \"total\": {total}, "\
+                  f"\"input\": {left}, \"output\": {right}, "\
+                  f"\"result\": \"PASS\"}}"
+            if not self.args.hide_pass:
+                self.write(out + "\n")
+
+        def failure(
+            self, case: int, total: int, left: str, right: str,
+            errlist: Iterable[str],
+        ) -> None:
+            """Write a JSON object for one failing case."""
+            out = f"{{\"case\": {case}, \"total\": {total}, "\
+                  f"\"input\": {left}, \"output\": {right}, "\
+                  f"\"result\": \"FAIL\", "\
+                  f"\"errors\": {list(errlist)}}}"
+            if not self.args.hide_fail:
+                self.write(out + "\n")
+
+        def result(
+            self, title: str, test: str, counts: dict[str, int],
+        ) -> None:
+            """Write a single JSON object summarising the test."""
+            p = counts["Pass"]
+            f = counts["Fail"]
+            out = f"{{\"title\": {title}, \"passes\": {p}, \"fails\": {f}}}"
+            if counts["Fail"] > 0:
+                if not self.args.hide_fail:
+                    self.write(out)
+            elif not self.args.hide_pass:
+                self.write(out)
+
     class CompactOutput(AllOutput):
         """One line per test: a PASS/FAIL marker and the counts."""
         def result(
