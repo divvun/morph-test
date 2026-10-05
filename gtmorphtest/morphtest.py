@@ -210,11 +210,7 @@ class MorphTest:
             p = counts["Pass"]
             f = counts["Fail"]
             out = f"\"passes\": {p}, \"fails\": {f}"
-            if counts["Fail"] > 0:
-                if not self.args.hide_fail:
-                    self.write(out)
-            elif not self.args.hide_pass:
-                self.write(out)
+            self.write(out)
             self.write("\n}")
             self.need_comma = True
 

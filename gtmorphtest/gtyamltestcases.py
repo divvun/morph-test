@@ -17,12 +17,18 @@ from termcolor import colored
 from . import __version__
 
 
+def print_json_log(json_fails: dict, options: Namespace):
+    """Write json log to file."""
+    print(json.dumps(json_fails, indent=2), file=options.json_log)
+
 def main():
     """Run CLI stuffs for yaml runner with json configs."""
     argp = ArgumentParser()
     argp.add_argument("-V", "--version", action="version",
                       version=f"%(prog)s {__version__}",
                       help="print version info")
+    argp.add_argument("-v", "--verbose", action="store_true",
+                      help="print verbose output")
     argp.add_argument("-c", "--config", type=open, metavar="CONFIG",
                       help="read configuration from json file CONFIG",
                       required=True)
@@ -58,6 +64,7 @@ def dostuff(options: Namespace, logfile: TextIO):
         print(colored("SKIP", "cyan"), f"{options.test_group} not found "
               "in config file {options.config.name}")
         sys.exit(77)
+    logfile.write(f"# YAML test log for {options.test_group}\n\n")
     testoptions = []
     if options.driver == "python":
         testoptions.append("gtmorphtest")
@@ -69,12 +76,15 @@ def dostuff(options: Namespace, logfile: TextIO):
     else:
         print(colored("ERROR", "red"), f"unknown driver {options.driver}")
         sys.exit(1)
-    testoptions.extend(["--output", "json", "--ignore-extra-analyses"])
+    testoptions.extend(["--output", "json", "--ignore-extra-analyses",
+                        "--hide-passes"])
     analyser = configuration[options.test_group]["analyser"]
     generator = configuration[options.test_group]["generator"]
     testoptions.extend(["--morph", analyser])
     testoptions.extend(["--gen", generator])
+    logfile.write(f"* Running on `{testoptions}`\n")
     fails = 0
+    json_fails = {"group": options.test_group, "tests": []}
     for yamlglob in configuration[options.test_group]["globs"]:
         for yamlfilename in glob(yamlglob):
             testname = basename(yamlfilename)
@@ -97,13 +107,31 @@ def dostuff(options: Namespace, logfile: TextIO):
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                 timeout=options.time_out, check=False)
             if rv.returncode != 0:
-                print(colored("FAIL", "red"), f"{testname} failed with "
-                      f"return code {rv.returncode}")
+                if options.verbose:
+                    print(colored("FAIL", "red"), f"{testname} failed with "
+                          f"return code {rv.returncode}")
                 logfile.write(f"## {testname} **failed**\n")
                 fails += 1
+                errs = rv.stderr.decode("utf-8")
+                if "Invalid output mode" in errs:
+                    print(colored("ERROR", "red"), f"{testoptions} failed with "
+                          f"return code {rv.returncode}")
+                    print(colored("ERROR", "red"), "Update morph-tester to "
+                          "latest version or use different -D driver")
+                    sys.exit(1)
+                resultjson = rv.stdout.decode("utf-8")
+                results = json.loads(resultjson)
+                logfile.write("\n* {results['total_fails'] failures\n\n")
+                json_fails["tests"].append({"testname": testname,
+                              "returncode": rv.returncode,
+                              "results": results})
             else:
-                print(colored("PASS", "green"), f"{testname} passed")
-                logfile.write(f"## {testname}\n")
+                if options.verbose:
+                    print(colored("PASS", "green"), f"{testname} passed")
+                logfile.write(f"## {testname} passed\n")
+                logfile.write("\n* all tests passed\n\n")
+    if options.json_log:
+        print_json_log(json_fails, options)
     if fails > 0:
         print(colored("FAIL", "red"), f"{fails} tests failed")
         print("See log in", colored(logfile.name, "magenta"))
