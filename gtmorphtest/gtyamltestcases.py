@@ -19,7 +19,8 @@ from . import __version__
 
 def print_json_log(json_fails: dict, options: Namespace):
     """Write json log to file."""
-    print(json.dumps(json_fails, indent=2), file=options.json_log)
+    json.dump(json_fails, options.json_log, indent=2, ensure_ascii=False)
+    options.json_log.write("\n")
 
 def main():
     """Run CLI stuffs for yaml runner with json configs."""
@@ -71,8 +72,8 @@ def dostuff(options: Namespace, logfile: TextIO):
     elif options.driver == "self":
         testoptions.extend(["python3", "-m", "gtmorphtest.gtmorphtest"])
     elif options.driver == "rust":
-        testoptions.append("gtmorphtester-rs")
-        testoptions.append("--pool")
+        testoptions.append("morph-test2")
+        # testoptions.append("--pool")
     else:
         print(colored("ERROR", "red"), f"unknown driver {options.driver}")
         sys.exit(1)
@@ -82,11 +83,14 @@ def dostuff(options: Namespace, logfile: TextIO):
     generator = configuration[options.test_group]["generator"]
     testoptions.extend(["--morph", analyser])
     testoptions.extend(["--gen", generator])
-    logfile.write(f"* Running on `{testoptions}`\n")
+    logfile.write(f"* Running on `{testoptions}`\n\n")
     fails = 0
     json_fails = {"group": options.test_group, "tests": []}
     for yamlglob in configuration[options.test_group]["globs"]:
-        for yamlfilename in glob(yamlglob):
+        yamlfilenames = glob(yamlglob)
+        if not yamlfilenames:
+            logfile.write(f"## `{yamlglob}` not found\n\n")
+        for yamlfilename in yamlfilenames:
             testname = basename(yamlfilename)
             fields = testname.split(".")
             gentests = False
@@ -110,18 +114,33 @@ def dostuff(options: Namespace, logfile: TextIO):
                 if options.verbose:
                     print(colored("FAIL", "red"), f"{testname} failed with "
                           f"return code {rv.returncode}")
-                logfile.write(f"## {testname} **failed**\n")
+                logfile.write(f"## {testname} **failed**\n\n")
                 fails += 1
                 errs = rv.stderr.decode("utf-8")
                 if "Invalid output mode" in errs:
                     print(colored("ERROR", "red"), f"{testoptions} failed with "
                           f"return code {rv.returncode}")
-                    print(colored("ERROR", "red"), "Update morph-tester to "
+                    print(colored("ERROR", "red"), "Update morph-test to "
+                          "latest version or use different -D driver")
+                    sys.exit(1)
+                elif "Ugyldig verdi" in errs and "json" in errs:
+                    print(colored("ERROR", "red"), f"{testoptions} failed with "
+                          f"return code {rv.returncode}")
+                    print(colored("ERROR", "red"), "Update morph-test2 to "
                           "latest version or use different -D driver")
                     sys.exit(1)
                 resultjson = rv.stdout.decode("utf-8")
                 results = json.loads(resultjson)
-                logfile.write("\n* {results['total_fails'] failures\n\n")
+                for result in results:
+                    if "fails" in result and result["fails"] > 0:
+                        logfile.write(f"* `{result['title']}`: "
+                                      f"{result['fails']} fails:\n")
+                        for fail in result["tests"]:
+                            logfile.write(f"  * `{fail['input']}` => "
+                                          f"{fail['output']} \n")
+                            for err in fail["errors"]:
+                                logfile.write(f"    * `{err}`\n")
+                logfile.write(f"\n* {results[-1]['total_fails']} failures\n\n")
                 json_fails["tests"].append({"testname": testname,
                               "returncode": rv.returncode,
                               "results": results})
